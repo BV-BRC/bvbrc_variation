@@ -18,7 +18,6 @@ use IPC::Run 'run';
 use Bio::KBase::AppService::AppConfig;
 use Bio::KBase::AppService::AppScript;
 
-my $script_dir = abs_path(dirname(__FILE__));
 my $data_url = Bio::KBase::AppService::AppConfig->data_api_url;
 # my $data_url = "https://www.patricbrc.org/api";
 my $script = Bio::KBase::AppService::AppScript->new(\&process_variation_data, \&preflight);
@@ -81,7 +80,7 @@ sub process_variation_data {
     # my $tmpdir = "/disks/tmp/var_bam1";
     # my $tmpdir = "/disks/tmp/var_debug";
 
-    system("chmod", "755", "$tmpdir");
+    chmod(0755, "$tmpdir");
     print STDERR "tmpdir=$tmpdir\n";
 
     print STDERR '$params = '. Dumper($params);
@@ -252,7 +251,7 @@ sub process_variation_data {
 
 sub run_var_annotate {
     my ($tmpdir, $ref_id, $lib) = @_;
-    my $annotate = "$script_dir/var-annotate.pl"; verify_cmd($annotate);
+    my $annotate = "var-annotate";
 
     my $fna = "$tmpdir/$ref_id/$ref_id.fna";
     my $gff = "$tmpdir/$ref_id/$ref_id.gff";
@@ -334,7 +333,7 @@ sub link_snpeff_annotate {
 
 sub run_var_combine {
     my ($tmpdir, $libs) = @_;
-    my $combine = "$script_dir/var-combine.pl"; verify_cmd($combine);
+    my $combine = "var-combine";
     my @files = map { -s "$tmpdir/$_/var.annotated.tsv" ? "$tmpdir/$_/var.annotated.tsv" :
                       -s "$tmpdir/$_/var.annotated.raw.tsv" ? "$tmpdir/$_/var.annotated.raw.tsv" :
                       undef } @$libs;
@@ -589,7 +588,7 @@ sub get_ws_file {
     my $token = get_token();
 
     my $base = basename($id);
-    $base =~ s/\s/_/g;
+    $base =~ s/[\s()]/_/g;
     my $file = "$tmpdir/$base";
     # return $file; # DEBUG
 
