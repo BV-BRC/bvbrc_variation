@@ -7,6 +7,7 @@ use Carp;
 use Cwd qw(abs_path getcwd);
 use Data::Dumper;
 use File::Temp;
+use File::Copy;
 use File::Basename;
 use File::Slurp;
 use JSON;
@@ -96,7 +97,7 @@ sub process_variation_data {
     my $mapper = $params->{mapper} || 'bwa_mem';
     my $caller = $params->{caller} || 'freebayes';
 
-    my $map = "$script_dir/var-map.pl"; verify_cmd($map);
+    my $map = "var-map";
 
     my $threads = $ENV{P3_ALLOCATED_CPU} // 2;
 
@@ -186,15 +187,32 @@ sub process_variation_data {
         run_snpeff($tmpdir, $ref_id, $_) if $has_gbk;
         run_var_annotate($tmpdir, $ref_id, $_) if $has_gbk;
         link_snpeff_annotate($tmpdir, $ref_id, $_) if $has_gbk;
-        system("ln -s $tmpdir/$_/aln.bam $tmpdir/$_.aln.bam") if -s "$tmpdir/$_/aln.bam";
-        system("ln -s $tmpdir/$_/aln.bam.bai $tmpdir/$_.aln.bam.bai") if -s "$tmpdir/$_/aln.bam.bai";
-        system("cp $tmpdir/$_/var.vcf $tmpdir/$_.var.vcf") if -s "$tmpdir/$_/var.vcf";
-        system("cp $tmpdir/$_/var.vcf.gz $tmpdir/$_.var.vcf.gz") if -s "$tmpdir/$_/var.vcf.gz";
-        system("cp $tmpdir/$_/var.vcf.gz.tbi $tmpdir/$_.var.vcf.gz.tbi") if -s "$tmpdir/$_/var.vcf.gz.tbi";
-        system("cp $tmpdir/$_/var.annotated.tsv $tmpdir/$_.var.annotated.tsv") if -s "$tmpdir/$_/var.annotated.tsv";
-        system("cp $tmpdir/$_/var.annotated.raw.tsv $tmpdir/$_.var.annotated.tsv") if ! -s "$tmpdir/$_/var.annotated.tsv" && -s "$tmpdir/$_/var.annotated.raw.tsv";
-        system("cp $tmpdir/$_/var.snpEff.vcf $tmpdir/$_.var.snpEff.vcf") if -s "$tmpdir/$_/var.snpEff.vcf";
-        system("cat $tmpdir/$_/consensus | sed 's/^>/>$_./g' > $tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
+
+        # system("ln -s $tmpdir/$_/aln.bam $tmpdir/$_.aln.bam") if -s "$tmpdir/$_/aln.bam";
+        # system("ln -s $tmpdir/$_/aln.bam.bai $tmpdir/$_.aln.bam.bai") if -s "$tmpdir/$_/aln.bam.bai";
+
+	link_if_present("$tmpdir/$_/aln.bam", "$tmpdir/$_.aln.bam");
+        link_if_present("$tmpdir/$_/aln.bam.bai", "$tmpdir/$_.aln.bam.bai");
+
+        # system("cp $tmpdir/$_/var.vcf $tmpdir/$_.var.vcf") if -s "$tmpdir/$_/var.vcf";
+        # system("cp $tmpdir/$_/var.vcf.gz $tmpdir/$_.var.vcf.gz") if -s "$tmpdir/$_/var.vcf.gz";
+        # system("cp $tmpdir/$_/var.vcf.gz.tbi $tmpdir/$_.var.vcf.gz.tbi") if -s "$tmpdir/$_/var.vcf.gz.tbi";
+        # system("cp $tmpdir/$_/var.annotated.tsv $tmpdir/$_.var.annotated.tsv") if -s "$tmpdir/$_/var.annotated.tsv";
+        # system("cp $tmpdir/$_/var.annotated.raw.tsv $tmpdir/$_.var.annotated.tsv") if ! -s "$tmpdir/$_/var.annotated.tsv" && -s "$tmpdir/$_/var.annotated.raw.tsv";
+        # system("cp $tmpdir/$_/var.snpEff.vcf $tmpdir/$_.var.snpEff.vcf") if -s "$tmpdir/$_/var.snpEff.vcf";
+
+        cp_if_present("$tmpdir/$_/var.vcf", "$tmpdir/$_.var.vcf");
+        cp_if_present("$tmpdir/$_/var.vcf.gz", "$tmpdir/$_.var.vcf.gz");
+        cp_if_present("$tmpdir/$_/var.vcf.gz.tbi", "$tmpdir/$_.var.vcf.gz.tbi");
+        cp_if_present("$tmpdir/$_/var.annotated.tsv", "$tmpdir/$_.var.annotated.tsv");
+        cp_if_present("$tmpdir/$_/var.annotated.raw.tsv", "$tmpdir/$_.var.annotated.tsv");
+        cp_if_present("$tmpdir/$_/var.snpEff.vcf", "$tmpdir/$_.var.snpEff.vcf");
+
+	run(["sed", "s/^>/>$_./g"],
+	    "<", "$tmpdir/$_/consensus",
+	    ">", "$tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
+	
+        # system("cat $tmpdir/$_/consensus | sed 's/^>/>$_./g' > $tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
     }
 
     run_var_combine($tmpdir, \@libs);
@@ -606,3 +624,23 @@ sub verify_cmd {
 }
 
 sub sysrun { system(@_) == 0 or confess("Command FAILED: ". join(" ", @_)); }
+
+sub link_if_present
+{
+    my($from, $to) = @_;
+
+    if (-s $from)
+    {
+	symlink($from, $to);
+    }
+}
+
+sub cp_if_present
+{
+    my($from, $to) = @_;
+
+    if (-s $from)
+    {
+	copy($from, $to);
+    }
+}
