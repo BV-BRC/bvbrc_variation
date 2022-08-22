@@ -17,6 +17,7 @@ use IPC::Run 'run';
 
 use Bio::KBase::AppService::AppConfig;
 use Bio::KBase::AppService::AppScript;
+use Bio::KBase::AppService::ReadSet;
 
 my $data_url = Bio::KBase::AppService::AppConfig->data_api_url;
 # my $data_url = "https://www.patricbrc.org/api";
@@ -31,13 +32,40 @@ sub preflight
 {
     my($app, $app_def, $raw_params, $params) = @_;
 
+
+
+    my $token = $app->token();
+    my $ws = $app->workspace();
+    
+    my $readset;
+    eval {
+	$readset = Bio::KBase::AppService::ReadSet->create_from_asssembly_params($params);
+    };
+    if ($@)
+    {
+	die "Error parsing assembly parameters: $@";
+    }
+    
+    my($ok, $errs, $comp_size, $uncomp_size) = $readset->validate($ws);
+    
+    if (!$ok)
+    {
+	die "Reads as defined in parameters failed to validate. Errors:\n\t" . join("\n\t", @$errs) . "\n";
+    }
+    print STDERR "comp=$comp_size uncomp=$uncomp_size\n";
+    
+    my $est_comp = $comp_size + 0.75 * $uncomp_size;
+    $est_comp /= 1e6;
+
+    my $est_storage = int(1.3e6 * $est_comp / 0.75);
+
     my $time = 86400 * 2;
 
     my $pf = {
 	cpu => 4,
-	memory => "128G",
+	memory => "48000M",
 	runtime => $time,
-	storage => 0,
+	storage => $est_storage,
 	is_control_task => 0,
     };
     return $pf;
