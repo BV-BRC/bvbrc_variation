@@ -19,7 +19,7 @@ usage: $0 [options] ref.fq reads_1.fq [reads_2.fq]
        -o dir           - output directory (D = ref_reads_[algo])
        -t int           - number of threads (D = 8)
        -m size          - max memory per thread; suffix K/M/G recognized (D = 2G)
-       --vc tool        - variant calling [samtools freebayes] (D = freebayes)
+       --vc tool        - variant calling [bcftools freebayes] (D = freebayes)
 
 End_of_Usage
 
@@ -89,9 +89,9 @@ sub other_read_file_in_pair {
 }
 
 sub call_variant_with_samtools {
-    verify_cmd(qw(samtools bcftools));
-    -s "mpileup"        or run("samtools mpileup -6 -uf ref.fa aln.bam > mpileup");
-    -s "var.sam.vcf"    or run("bcftools call -vc mpileup > var.sam.vcf");
+    verify_cmd(qw(bcftools));
+    -s "mpileup"        or run("bcftools mpileup -Ou -f ref.fa aln.bam >mpileup");
+    -s "var.sam.vcf"    or run("bcftools call -Ov -mv mpileup >var.sam.vcf");
     -s "var.sam.q.vcf"  or run("vcffilter -f 'QUAL > 10 & DP > 5' var.sam.vcf > var.sam.q.vcf");
     -s "var.sam.count"  or run("grep -v '^#' var.sam.vcf |cut -f4 |grep -v 'N' |wc -l > var.sam.count");
     -s "var.vcf"        or run("ln -s -f var.sam.q.vcf var.vcf");
