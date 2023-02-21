@@ -118,7 +118,7 @@
       "type": "enum",
       "enum": [
         "FreeBayes",
-        "SAMtools"
+        "BCFtools"
       ]
     },
     {
