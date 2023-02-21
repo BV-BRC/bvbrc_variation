@@ -36,7 +36,7 @@ sub preflight
 
     my $token = $app->token();
     my $ws = $app->workspace();
-    
+
     my $readset;
     eval {
 	$readset = Bio::KBase::AppService::ReadSet->create_from_asssembly_params($params);
@@ -45,15 +45,15 @@ sub preflight
     {
 	die "Error parsing assembly parameters: $@";
     }
-    
+
     my($ok, $errs, $comp_size, $uncomp_size) = $readset->validate($ws);
-    
+
     if (!$ok)
     {
 	die "Reads as defined in parameters failed to validate. Errors:\n\t" . join("\n\t", @$errs) . "\n";
     }
     print STDERR "comp=$comp_size uncomp=$uncomp_size\n";
-    
+
     my $est_comp = $comp_size + 0.75 * $uncomp_size;
     $est_comp /= 1e6;
 
@@ -80,7 +80,7 @@ sub process_variation_data {
     # Redirect tmp to large NFS if more than 4 input files.
     # (HACK)
     #
-    
+
     my $file_count = count_params_files($params);
     print STDERR "File count: $file_count\n";
     my $bigtmp = "/vol/patric3/tmp";
@@ -169,7 +169,7 @@ sub process_variation_data {
 	    # my $tmp = "$tmpdir/$file_name";
 	    print STDERR "Downloading $srr\n";
 	    my $rc = system("p3-sra", "--metaonly", "--metadata-file", "$tmp", "--id", $srr);
-	    if ($rc != 0) 
+	    if ($rc != 0)
 	    	{
 	    	die "p3-sra failed: $rc";
 	    	}
@@ -205,9 +205,9 @@ sub process_variation_data {
 		    }
 	    next;
 	    }
-    
+
     close(LIBS);
-		
+
 	# All done getting alignments and variants.
     for (@libs) {
     	print STDERR "GBK existence: $has_gbk \n";
@@ -238,7 +238,7 @@ sub process_variation_data {
 	run(["sed", "s/^>/>$_./g"],
 	    "<", "$tmpdir/$_/consensus",
 	    ">", "$tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
-	
+
         # system("cat $tmpdir/$_/consensus | sed 's/^>/>$_./g' > $tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
     }
 
@@ -246,7 +246,8 @@ sub process_variation_data {
     summarize($tmpdir, \@libs, $mapper, $caller);
 
     my @outputs;
-    push @outputs, map { [ $_, 'txt' ] } glob("$tmpdir/*.tsv $tmpdir/*.txt");
+    push @outputs, map { [ $_, 'txt' ] } glob("$tmpdir/*.txt");
+    push @outputs, map { [ $_, 'tsv' ] } glob("$tmpdir/*.tsv");
     push @outputs, map { [ $_, 'vcf' ] } glob("$tmpdir/*.vcf");
     push @outputs, map { [ $_, 'html'] } glob("$tmpdir/*.html");
     push @outputs, map { [ $_, 'bam' ] } glob("$tmpdir/*.bam");
@@ -507,7 +508,7 @@ sub prepare_ref_data {
 
     write_output($out, "$dir/$gid.gff");
 
-    my $has_gbk = 0;    
+    my $has_gbk = 0;
     $has_gbk = 1 if -s "$dir/genes.gbk";
 
     return $has_gbk;
