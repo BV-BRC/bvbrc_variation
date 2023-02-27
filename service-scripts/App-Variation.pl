@@ -144,7 +144,7 @@ sub process_variation_data {
 
     my $threads = $ENV{P3_ALLOCATED_CPU} // 2;
 
-    my @basecmd = ($map, "--path-prefix", );
+    my @basecmd = ($map, "--path-prefix", $path_prefix);
     push @basecmd, ("-a", $mapper);
     push @basecmd, ("--vc", $caller);
     push @basecmd, ("--threads", $threads);
