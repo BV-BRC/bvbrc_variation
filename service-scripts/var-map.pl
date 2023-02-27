@@ -44,6 +44,17 @@ $read1 = abs_path($read1);
 $read2 = abs_path($read2) if $read2;
 $read2 = other_read_file_in_pair($read1) if $paired;
 
+print "READS = $read1 $read2\n";
+if ($read1 && $read1 =~ /\.gz$/) {
+	run("gunzip $read1");
+	$read1 =  substr($read1, 0, -3);
+}
+
+if ($read2 && $read2 =~ /\.gz$/) {
+	run("gunzip $read2");
+	$read2 =  substr($read2, 0, -3);
+}
+
 $nthread ||= 8;
 $memory  ||= '2G'; $memory .= 'G' if $memory =~ /\d$/;
 $algo    ||= 'bwa_mem'; $algo .= "_se" if !$read2;
