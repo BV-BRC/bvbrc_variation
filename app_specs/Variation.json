@@ -136,6 +136,14 @@
       "default": null,
       "desc": "Basename for the generated output files. Defaults to the basename of the input data.",
       "type": "wsid"
-    }
+    },
+        {
+          "id": "debug",
+          "label": "Run job in debug mode",
+          "required": 0,
+          "default": false,
+          "type": "bool"
+        }
+      
   ]
 }
