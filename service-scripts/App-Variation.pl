@@ -88,9 +88,9 @@ sub preflight
 sub process_variation_data {
     my ($app, $app_def, $raw_params, $params) = @_;
 
-    system("samtools");
-    system("bcftools");
-    system("freebayes");
+    system("samtools", "--version") == 0 or die "samtools --version failed";
+    system("bcftools", "--version") == 0 or die "bcftools --version failed";
+    system("freebayes", "--version") == 0 or die "freebayes --version failed";
 
     #
     # Redirect tmp to large NFS if more than 4 input files.
@@ -114,11 +114,17 @@ sub process_variation_data {
 
     my $output_folder = $app->result_folder();
 
+    my $cleanup = 1;
+    if ($params->{debug})
+    {
+	print STDERR "Running in debug mode, keeping tmpdir in place after run\n";
+	$cleanup = 0;
+    }
+
     my $run_dir = getcwd();
 
-    my $tmpdir = File::Temp->newdir();
-    # my $tmpdir = "/tmp/tmp";
-    # my $tmpdir = File::Temp->newdir( CLEANUP => 0 );
+    my $tmpdir = File::Temp->newdir( CLEANUP => $cleanup );
+    
     # my $tmpdir = "/tmp/oIGe_LLBbt";
     # my $tmpdir = "/disks/tmp/var_bam";
     # my $tmpdir = "/disks/tmp/var_bam1";

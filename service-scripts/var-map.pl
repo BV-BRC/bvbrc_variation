@@ -71,6 +71,10 @@ if (eval "defined(&map_with_$algo)") {
             print $@ if $@;
             compute_consensus() unless $@;
         }
+	else
+	{
+	    die "No variant calling code available for $vc\n";
+	}
         summarize() unless -s "summary.txt";
     }
 } else {
@@ -91,7 +95,7 @@ sub other_read_file_in_pair {
     return $r2 if -s $r2 && $r2 ne $r1;
 }
 
-sub call_variant_with_samtools {
+sub call_variant_with_bcftools {
     verify_cmd(qw(bcftools));
     -s "mpileup"        or run("bcftools mpileup -Ou -f ref.fa aln.bam >mpileup");
     -s "var.sam.vcf"    or run("bcftools call -Ov -mv mpileup >var.sam.vcf");
