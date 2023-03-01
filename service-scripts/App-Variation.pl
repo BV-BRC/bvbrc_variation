@@ -14,14 +14,26 @@ use JSON;
 use P3DataAPI;
 use IPC::Run 'run';
 
+#
+# Arrange for the proper samtools/bcftools.
+# Assume freebayes in default bin.
+#
+
+my $path_prefix;
+
+BEGIN {
+    my $rt = $ENV{KB_RUNTIME};
+    $path_prefix = "$rt/samtools-1.17/bin:$rt/bcftools-1.17/bin";
+    $ENV{PATH} = "$path_prefix:$ENV{PATH}";
+}
 
 use Bio::KBase::AppService::AppConfig;
 use Bio::KBase::AppService::AppScript;
 use Bio::KBase::AppService::ReadSet;
 
 my $data_url = Bio::KBase::AppService::AppConfig->data_api_url;
-# my $data_url = "https://www.patricbrc.org/api";
 my $script = Bio::KBase::AppService::AppScript->new(\&process_variation_data, \&preflight);
+
 my $rc = $script->run(\@ARGV);
 exit $rc;
 
@@ -76,6 +88,10 @@ sub preflight
 sub process_variation_data {
     my ($app, $app_def, $raw_params, $params) = @_;
 
+    system("samtools");
+    system("bcftools");
+    system("freebayes");
+
     #
     # Redirect tmp to large NFS if more than 4 input files.
     # (HACK)
@@ -128,7 +144,7 @@ sub process_variation_data {
 
     my $threads = $ENV{P3_ALLOCATED_CPU} // 2;
 
-    my @basecmd = ($map);
+    my @basecmd = ($map, "--path-prefix", $path_prefix);
     push @basecmd, ("-a", $mapper);
     push @basecmd, ("--vc", $caller);
     push @basecmd, ("--threads", $threads);

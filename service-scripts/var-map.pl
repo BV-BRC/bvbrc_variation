@@ -23,15 +23,18 @@ usage: $0 [options] ref.fq reads_1.fq [reads_2.fq]
 
 End_of_Usage
 
-my ($help, $algo, $memory, $nthread, $outdir, $paired, $vc);
+my ($help, $algo, $memory, $nthread, $outdir, $paired, $vc, $path_prefix);
 
 GetOptions("h|help"        => \$help,
+	   "path-prefix=s" => \$path_prefix,
            "a|algo=s"      => \$algo,
            "m|memory=s"    => \$memory,
            "o|outdir=s"    => \$outdir,
            "p|paired"      => \$paired,
            "t|threads=i"   => \$nthread,
            "vc=s"          => \$vc);
+
+$ENV{PATH} = "$path_prefix:$ENV{PATH}" if $path_prefix;
 
 my $ref   = shift @ARGV;
 my $read1 = shift @ARGV;
