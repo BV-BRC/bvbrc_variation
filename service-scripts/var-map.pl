@@ -273,13 +273,13 @@ sub map_with_mosaik_se {
 }
 
 sub map_with_last {
-    verify_cmd(qw(lastdb lastal parallel-fastq last-pair-probs maf-convert samtools));
+    verify_cmd(qw(lastdb lastal parallel last-pair-probs maf-convert samtools));
     -s "ref.fa"         or run("ln -s -f $ref ref.fa");
     -s "read_1.fq"      or run("ln -s -f $read1 read_1.fq");
     -s "read_2.fq"      or run("ln -s -f $read2 read_2.fq");
     -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
-    -s "out1.maf"       or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index' < read_1.fq > out1.maf");
-    -s "out2.maf"       or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index' < read_2.fq > out2.maf");
+    -s "out1.maf"       or run("parallel --gnu --pipe -L8 -J 8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_1.fq > out1.maf");
+    -s "out2.maf"       or run("parallel --gnu --pipe -L8 -J 8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_2.fq > out2.maf");
   # -s "out1.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_1.fq > out1.maf"); # sequential
   # -s "out2.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_2.fq > out2.maf"); # sequential
     -s "aln-pe.maf"     or run("last-pair-probs -m 0.1 out1.maf out2.maf > aln-pe.maf");
@@ -295,11 +295,11 @@ sub map_with_last {
 }
 
 sub map_with_last_se {
-    verify_cmd(qw(lastdb parallel-fastq last-pair-probs samtools));
+    verify_cmd(qw(lastdb parallel last-pair-probs samtools));
     -s "ref.fa"         or run("ln -s -f $ref ref.fa");
     -s "read_1.fq"      or run("ln -s -f $read1 read.fq");
     -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
-    -s "out.maf"        or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index' < read.fq > out.maf");
+    -s "out.maf"        or run("parallel --gnu --pipe -L8 -J 8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read.fq > out.maf");
   # -s "out.maf"        or run("lastal -Q1 -d108 -e120 -i1 index read.fq > out.maf"); # sequential
     -s "aln-se.maf"     or run("ln -s -f out.maf aln-se.maf");
     -s "ref.fa.fai"     or run("samtools faidx ref.fa");
