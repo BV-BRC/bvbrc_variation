@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-# requires: samtools v1.3
+# requires: samtools v1.17, bcftools v1.17
 
 use strict;
 use Carp;
@@ -46,6 +46,19 @@ $ref   = abs_path($ref);
 $read1 = abs_path($read1);
 $read2 = abs_path($read2) if $read2;
 $read2 = other_read_file_in_pair($read1) if $paired;
+
+print "READS = $read1 $read2\n";
+if ($read1 && $read1 =~ /\.gz$/ && $algo eq 'LAST') {
+	print "gunzip $read1\n";
+	run("gunzip $read1");
+	$read1 =  substr($read1, 0, -3);
+}
+
+if ($read2 && $read2 =~ /\.gz$/ && $algo eq 'LAST') {
+	print "gunzip $read2\n";
+	run("gunzip $read2");
+	$read2 =  substr($read2, 0, -3);
+}
 
 $nthread ||= 8;
 $memory  ||= '2G'; $memory .= 'G' if $memory =~ /\d$/;
@@ -115,9 +128,24 @@ sub call_variant_with_freebayes {
 
 sub compute_consensus {
     verify_cmd(qw(bgzip tabix bcftools));
+    my $consensus_error = '';
     -s "var.vcf.gz"     or run("bgzip -c var.vcf > var.vcf.gz");
     -s "var.vcf.gz.tbi" or run("tabix var.vcf.gz");
-    -s "consensus"      or run("bcftools consensus -c chain -f ref.fa var.vcf.gz >consensus");
+    -s "consensus"      or my $consensus_error = run_with_error_msg("bcftools consensus -c chain -f ref.fa var.vcf.gz", 'consensus');
+    # handle the case "The fasta sequence does not match the REF allele" 
+    print "compute_consensus: $consensus_error\n";
+    
+    if ($consensus_error =~ /The fasta sequence does not match the REF allele/) {
+      print "revise and index ref.fa\n";
+      run("sed -E '/^>/! s/[^ACGTacgts]/N/g' ref.fa > modified_ref.fa");
+      run("samtools faidx modified_ref.fa");
+      print "run bcftools norm\n";
+      run("bcftools norm -f modified_ref.fa var.vcf.gz -o var.norm.vcf");
+      run("bgzip -c var.norm.vcf > var.norm.vcf.gz");
+      run("bcftools index var.norm.vcf.gz");
+      run("bcftools consensus -c chain -f modified_ref.fa var.norm.vcf.gz > consensus");
+      print "compute_consensus ended\n";
+    }
 }
 
 sub compute_stats {
@@ -278,14 +306,15 @@ sub map_with_last {
     -s "read_1.fq"      or run("ln -s -f $read1 read_1.fq");
     -s "read_2.fq"      or run("ln -s -f $read2 read_2.fq");
     -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
-    -s "out1.maf"       or run("parallel --gnu --pipe -L8 -J 8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_1.fq > out1.maf");
-    -s "out2.maf"       or run("parallel --gnu --pipe -L8 -J 8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_2.fq > out2.maf");
+    -s "out1.maf"       or run("parallel --gnu --pipe -L8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_1.fq > out1.maf");
+    -s "out2.maf"       or run("parallel --gnu --pipe -L8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_2.fq > out2.maf");
   # -s "out1.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_1.fq > out1.maf"); # sequential
   # -s "out2.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_2.fq > out2.maf"); # sequential
     -s "aln-pe.maf"     or run("last-pair-probs -m 0.1 out1.maf out2.maf > aln-pe.maf");
     -s "ref.fa.fai"     or run("samtools faidx ref.fa");
     -s "sam.header"     or run("awk '{ print \"\@SQ\\tSN:\"\$1\"\\tLN:\"\$2 }' ref.fa.fai > sam.header");
     -s "aln.raw.sam"    or run("bash -c 'cat sam.header <(maf-convert sam aln-pe.maf) > aln.raw.sam'");
+    remove_extra_pg_headers('aln.raw.sam');
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread -o aln.sorted.bam aln.keep.bam");
@@ -299,12 +328,13 @@ sub map_with_last_se {
     -s "ref.fa"         or run("ln -s -f $ref ref.fa");
     -s "read_1.fq"      or run("ln -s -f $read1 read.fq");
     -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
-    -s "out.maf"        or run("parallel --gnu --pipe -L8 -J 8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read.fq > out.maf");
+    -s "out.maf"        or run("parallel --gnu --pipe -L8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read.fq > out.maf");
   # -s "out.maf"        or run("lastal -Q1 -d108 -e120 -i1 index read.fq > out.maf"); # sequential
     -s "aln-se.maf"     or run("ln -s -f out.maf aln-se.maf");
     -s "ref.fa.fai"     or run("samtools faidx ref.fa");
     -s "sam.header"     or run("awk '{ print \"\@SQ\\tSN:\"\$1\"\\tLN:\"\$2 }' ref.fa.fai > sam.header");
     -s "aln.raw.sam"    or run("bash -c 'cat sam.header <(maf-convert sam aln-se.maf) > aln.raw.sam'");
+    remove_extra_pg_headers('aln.raw.sam');
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread -o aln.sorted.bam aln.keep.bam");
@@ -342,7 +372,7 @@ sub summarize {
     }
     if (-s "var.sam.count") {
         my $raw_vars = `cat var.sam.count`;
-        $summary .= "Raw SAMtools variants    = $raw_vars";
+        $summary .= "Raw BCFtools variants    = $raw_vars";
     }
     if (-s "var.fb.count") {
         my $raw_vars = `cat var.fb.count`;
@@ -408,4 +438,36 @@ sub run {
     my $rc = system($_[0]);
     print STDERR "RC: $rc\n";
     $rc	== 0 or confess("FAILED: $_[0]");
+}
+
+sub run_with_error_msg {
+    my ($command, $filename) = @_;
+    my $stderr_file = "$filename.err";
+    my $rc = system("$command >$filename 2> $stderr_file");
+    print STDERR "RC: $rc\n";
+    open my $stderr_fh, '<', $stderr_file or die "Failed to open $stderr_file: $!";
+    my $output = do { local $/; <$stderr_fh> };
+    close $stderr_fh;
+    chomp $output;
+    return $output;
+}
+
+sub remove_extra_pg_headers {
+    my ($infile) = @_;
+    my $outfile = "$infile.tmp";
+    open my $in_fh, "<", $infile or die "Cannot open $infile: $!";
+    open my $out_fh, ">", $outfile or die "Cannot open $outfile: $!";
+    my $count = 0;
+    while (my $line = <$in_fh>) {
+        if ($line =~ /^\@PG/) {
+            $count++;
+            if ($count > 1) {
+               next;
+            }
+        }
+        print $out_fh $line;
+    }
+    close $in_fh;
+    close $out_fh;
+    rename $outfile, $infile or die "Cannot overwrite $infile: $!";
 }
