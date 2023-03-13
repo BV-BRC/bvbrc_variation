@@ -131,7 +131,7 @@ sub compute_consensus {
     my $consensus_error = '';
     -s "var.vcf.gz"     or run("bgzip -c var.vcf > var.vcf.gz");
     -s "var.vcf.gz.tbi" or run("tabix var.vcf.gz");
-    -s "consensus"      or my $consensus_error = run_with_error_msg("bcftools consensus -c chain -f ref.fa var.vcf.gz", 'consensus');
+    -s "consensus"      or $consensus_error = run_with_error_msg("bcftools consensus -c chain -f ref.fa var.vcf.gz", 'consensus');
     # handle the case "The fasta sequence does not match the REF allele" 
     print "compute_consensus: $consensus_error\n";
     
