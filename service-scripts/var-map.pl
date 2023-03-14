@@ -137,7 +137,7 @@ sub compute_consensus {
     
     if ($consensus_error =~ /The fasta sequence does not match the REF allele/) {
       print "revise and index ref.fa\n";
-      run("sed -E '/^>/! s/[^ACGTacgts]/N/g' ref.fa > modified_ref.fa");
+      run("sed -E '/^>/! s/[^ACGTacgt]/N/g' ref.fa > modified_ref.fa");
       run("samtools faidx modified_ref.fa");
       print "run bcftools norm\n";
       run("bcftools norm -f modified_ref.fa var.vcf.gz -o var.norm.vcf");
