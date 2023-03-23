@@ -1,0 +1,10 @@
+{
+  "srr_ids": [
+    "SRR847052"
+  ],
+  "output_path": "/olson@patricbrc.org/PATRIC-QA/applications/App-Variation",
+  "output_file": "SRR847052_LAST_BCFtools",
+  "reference_genome_id": "272631.5",
+  "mapper": "LAST",
+  "caller": "BCFtools"
+}

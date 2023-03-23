@@ -1,0 +1,10 @@
+{
+  "srr_ids": [
+    "SRR847052"
+  ],
+  "output_path": "/olson@patricbrc.org/PATRIC-QA/applications/App-Variation",
+  "output_file": "SRR847052_minimap2_BCFtools",
+  "reference_genome_id": "272631.5",
+  "mapper": "minimap2",
+  "caller": "BCFtools"
+}
