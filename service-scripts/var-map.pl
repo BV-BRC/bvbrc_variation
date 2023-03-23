@@ -343,6 +343,35 @@ sub map_with_last_se {
     -s "aln.bam.bai"    or run("samtools index aln.bam aln.bam.bai");
 }
 
+sub map_with_minimap2 {
+    verify_cmd(qw(minimap2 samtools));
+    -s "ref.fa"         or run("ln -s -f $ref ref.fa");
+    -s "read_1.fq"      or run("ln -s -f $read1 read_1.fq");
+    -s "read_2.fq"      or run("ln -s -f $read2 read_2.fq");
+    -s "aln-pe.sam"     or run("minimap2 -t $nthread -a ref.fa read_1.fq read_2.fq -o aln-pe.sam");
+    -s "aln.raw.sam"    or run("ln -s -f aln-pe.sam aln.raw.sam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
+    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread -o aln.sorted.bam aln.keep.bam");
+    -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
+    -s "aln.bam"        or run("ln -s -f aln.dedup.bam aln.bam");
+    -s "aln.bam.bai"    or run("samtools index aln.bam aln.bam.bai");
+}
+
+sub map_with_minimap2_se {
+    verify_cmd(qw(minimap2 samtools));
+    -s "ref.fa"         or run("ln -s -f $ref ref.fa");
+    -s "read.fq"        or run("ln -s -f $read1 read.fq");
+    -s "aln-se.sam"     or run("minimap2 -t $nthread -a ref.fa read.fq -o aln-se.sam");
+    -s "aln.raw.sam"    or run("ln -s -f aln-se.sam aln.raw.sam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
+    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread -o aln.sorted.bam aln.keep.bam");
+    -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
+    -s "aln.bam"        or run("ln -s -f aln.dedup.bam aln.bam");
+    -s "aln.bam.bai"    or run("samtools index aln.bam aln.bam.bai");
+}
+
 sub summarize {
     my $summary;
     if (-s "raw.flagstat") {
