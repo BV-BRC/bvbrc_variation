@@ -106,7 +106,8 @@
         "BWA-mem-strict",
         "Bowtie2",
         "MOSAIK",
-        "LAST"
+        "LAST",
+        "minimap2"
       ]
     },
     {
