@@ -163,9 +163,9 @@ sub compute_stats {
 
 sub map_with_bwa_mem {
     verify_cmd(qw(bwa samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read_1.fq"      or run("ln -s -f '$read1' read_1.fq");
-    -s "read_2.fq"      or run("ln -s -f '$read2' read_2.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read_1.fq"      or run_symlink($read1, "read_1.fq");
+    -s "read_2.fq"      or run_symlink($read2, "read_2.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
     -s "aln-pe.sam"     or run("bwa mem -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
     -s "aln.raw.sam"    or run("ln -s -f aln-pe.sam aln.raw.sam");
@@ -182,8 +182,8 @@ sub map_with_bwa_mem {
 
 sub map_with_bwa_mem_se {
     verify_cmd(qw(bwa samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read.fq"        or run("ln -s -f '$read1' read.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read.fq"        or run_symlink($read1, "read.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
     -s "aln-se.sam"     or run("bwa mem -t $nthread ref.fa read.fq > aln-se.sam 2>mem.log");
     -s "aln.raw.sam"    or run("ln -s -f aln-se.sam aln.raw.sam");
@@ -197,9 +197,9 @@ sub map_with_bwa_mem_se {
 
 sub map_with_bwa_mem_strict {
     verify_cmd(qw(bwa samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read_1.fq"      or run("ln -s -f '$read1' read_1.fq");
-    -s "read_2.fq"      or run("ln -s -f '$read2' read_2.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read_1.fq"      or run_symlink($read1, "read_1.fq");
+    -s "read_2.fq"      or run_symlink($read2, "read_2.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
     -s "aln-pe.sam"     or run("bwa mem -B9 -O16 -E1 -L5 -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
     -s "aln.raw.sam"    or run("ln -s -f aln-pe.sam aln.raw.sam");
@@ -213,8 +213,8 @@ sub map_with_bwa_mem_strict {
 
 sub map_with_bwa_mem_strict_se {
     verify_cmd(qw(bwa samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read.fq"        or run("ln -s -f '$read1' read.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read.fq"        or run_symlink($read1, "read.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
     -s "aln-se.sam"     or run("bwa mem -B9 -O16 -E1 -L5 -t $nthread ref.fa read.fq > aln-se.sam 2>mem.log");
     -s "aln.raw.sam"    or run("ln -s -f aln-se.sam aln.raw.sam");
@@ -228,9 +228,9 @@ sub map_with_bwa_mem_strict_se {
 
 sub map_with_bowtie2 {
     verify_cmd(qw(bowtie2-build bowtie2 samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read_1.fq"      or run("ln -s -f '$read1' read_1.fq");
-    -s "read_2.fq"      or run("ln -s -f '$read2' read_2.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read_1.fq"      or run_symlink($read1, "read_1.fq");
+    -s "read_2.fq"      or run_symlink($read2, "read_2.fq");
     -s "ref.1.bt2"      or run("bowtie2-build ref.fa ref");
     -s "aln.raw.sam"    or run("bowtie2 -p $nthread -x ref -1 $read1 -2 $read2 -S aln.raw.sam");
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -f 0x2 -q 10 -bS aln.raw.sam > aln.keep.bam"); # keep only properly paired reads
@@ -243,8 +243,8 @@ sub map_with_bowtie2 {
 
 sub map_with_bowtie2_se {
     verify_cmd(qw(bowtie2-build bowtie2 samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read.fq"        or run("ln -s -f '$read1' read.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read.fq"        or run_symlink($read1, "read.fq");
     -s "ref.1.bt2"      or run("bowtie2-build ref.fa ref");
     -s "aln.raw.sam"    or run("bowtie2 -p $nthread -x ref -U $read1 -S aln.raw.sam");
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS -q 10 aln.raw.sam > aln.keep.bam");
@@ -302,9 +302,9 @@ sub map_with_mosaik_se {
 
 sub map_with_last {
     verify_cmd(qw(lastdb lastal parallel last-pair-probs maf-convert samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read_1.fq"      or run("ln -s -f '$read1' read_1.fq");
-    -s "read_2.fq"      or run("ln -s -f '$read2' read_2.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read_1.fq"      or run_symlink($read1, "read_1.fq");
+    -s "read_2.fq"      or run_symlink($read2, "read_2.fq");
     -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
     -s "out1.maf"       or run("parallel --gnu --pipe -L8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_1.fq > out1.maf");
     -s "out2.maf"       or run("parallel --gnu --pipe -L8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read_2.fq > out2.maf");
@@ -325,8 +325,8 @@ sub map_with_last {
 
 sub map_with_last_se {
     verify_cmd(qw(lastdb parallel last-pair-probs samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read_1.fq"      or run("ln -s -f '$read1' read.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read.fq"        or run_symlink($read1, "read.fq");
     -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
     -s "out.maf"        or run("parallel --gnu --pipe -L8 -j $nthread -k 'lastal -Q fastx -d108 -e120 -i1 index' < read.fq > out.maf");
   # -s "out.maf"        or run("lastal -Q1 -d108 -e120 -i1 index read.fq > out.maf"); # sequential
@@ -345,9 +345,9 @@ sub map_with_last_se {
 
 sub map_with_minimap2 {
     verify_cmd(qw(minimap2 samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read_1.fq"      or run("ln -s -f '$read1' read_1.fq");
-    -s "read_2.fq"      or run("ln -s -f '$read2' read_2.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read_1.fq"      or run_symlink($read1, "read_1.fq");
+    -s "read_2.fq"      or run_symlink($read2, "read_2.fq");
     -s "aln-pe.sam"     or run("minimap2 -t $nthread -a ref.fa read_1.fq read_2.fq -o aln-pe.sam");
     -s "aln.raw.sam"    or run("ln -s -f aln-pe.sam aln.raw.sam");
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
@@ -360,8 +360,8 @@ sub map_with_minimap2 {
 
 sub map_with_minimap2_se {
     verify_cmd(qw(minimap2 samtools));
-    -s "ref.fa"         or run("ln -s -f '$ref' ref.fa");
-    -s "read.fq"        or run("ln -s -f '$read1' read.fq");
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read.fq"        or run_symlink($read1, "read.fq");
     -s "aln-se.sam"     or run("minimap2 -t $nthread -a ref.fa read.fq -o aln-se.sam");
     -s "aln.raw.sam"    or run("ln -s -f aln-se.sam aln.raw.sam");
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
@@ -500,3 +500,11 @@ sub remove_extra_pg_headers {
     close $out_fh;
     rename $outfile, $infile or die "Cannot overwrite $infile: $!";
 }
+
+sub run_symlink {
+    my ($source, $target) = @_;
+	symlink($source, $target) or confess "Failed to symlink $source to $target: $!";
+}
+
+
+
