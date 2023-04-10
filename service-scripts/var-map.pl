@@ -466,7 +466,7 @@ sub run {
     print STDERR "Running: $_[0]\n";
     my $rc = system($_[0]);
     print STDERR "RC: $rc\n";
-    $rc	== 0 or confess("FAILED: $_[0]");
+    $rc == 0 or confess("FAILED: $_[0]");
 }
 
 sub run_with_error_msg {
@@ -503,8 +503,9 @@ sub remove_extra_pg_headers {
 
 sub run_symlink {
     my ($source, $target) = @_;
-	symlink($source, $target) or confess "Failed to symlink $source to $target: $!";
+    if (-e $target) {
+        unlink $target or die "Failed to remove existing symlink: $!";
+    }
+    symlink($source, $target) or confess "Failed to symlink $source to $target: $!";
 }
-
-
 
