@@ -23,7 +23,7 @@ my @head = ('Samples', 'Contig', 'Pos', 'Ref', 'Var', 'Score', 'Var cov', 'Var f
             'Type', 'Ref nt', 'Var nt', 'Ref aa', 'Var aa', 'Frameshift',
             'Gene ID', 'Locus tag', 'Gene name', 'Function',
             "Upstream feature",
-            "Downstream feature" );
+            "Downstream feature", 'snpEff_type', 'snpEff_impact');
 
 if ($lines[0] =~ /^Sample/) {
     my $line = $lines[0];
