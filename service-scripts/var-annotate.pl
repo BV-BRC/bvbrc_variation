@@ -57,7 +57,7 @@ my @head = ('Sample', 'Contig', 'Pos', 'Ref', 'Var', 'Score', 'Var cov', 'Var fr
             'Type', 'Ref nt', 'Var nt', 'Ref nt pos change', 'Ref aa pos change', 'Frameshift',
             'Gene ID', 'Locus tag', 'Gene name', 'Function',
             "Upstream feature",
-            "Downstream feature" );
+            "Downstream feature", 'snpEff_type', 'snpEff_impact' );
 
 if ($show_html) {
     my @rows;
@@ -96,15 +96,38 @@ sub vcf_to_snps {
             $alt_dp = $info->{AO};
             $alt_frac = sprintf("%.2f", $alt_dp / $info->{DP});
         }
-
-		my @eff = split(/\|/, $info->{EFF});
-		my $ref_nt_change = "";
-		my $ref_aa_change = "";
-		if ($eff[3] =~ /p\.(.+)\/c\.(.+)/) {
-			$ref_aa_change = $1;
-			$ref_nt_change = $2;
-		}
-        
+     
+        my $snpEff_type = "";
+        my $snpEff_impact = "";
+        my $ref_nt_change = "";
+        my $ref_aa_change = "";
+        if ($info->{ANN}) {
+            my ($ann_str) = $info->{ANN} =~ /([^;]+)/;
+            my @ann_fields = split(/\|/, $ann_str);
+            $snpEff_type = $ann_fields[1];
+            $snpEff_impact = $ann_fields[2];
+            for my $field (@ann_fields) {
+                if ($field =~ /^c\./) {
+                    $ref_nt_change = substr($field, 2);
+                } elsif ($field =~ /^p\./) {
+                    $ref_aa_change = substr($field, 2);
+                }
+            }
+        } elsif ($info->{EFF}) {
+            my ($eff_str) = $info->{EFF} =~ /([^;]+)/;
+            my ($eff_type, $eff_impact, $eff_ref_nt_change, $eff_ref_aa_change);
+            if ($eff_str =~ /(\w+)\((.+?)\|(.+?)\|(.+?)\|(.+?)\)/) {
+                ($eff_type, $eff_impact, undef, $eff_ref_nt_change, $eff_ref_aa_change) = ($1, $2, $3, $4, $5);
+            }
+            $snpEff_type = $eff_type;
+            $snpEff_impact = $eff_impact;
+            $ref_nt_change = substr($eff_ref_nt_change, 2);
+            $ref_aa_change = substr($eff_ref_aa_change, 2);
+        }       
+ 
+        # print STDERR 'vcf_to_snps $ref_nt_change = '. $ref_nt_change . '\n';
+        # print STDERR 'vcf_to_snps $ref_aa_change = '. $ref_aa_change . '\n';
+              
         my $map_qual = $info->{MQ} || $info->{MQM};
 
         # print STDERR join("\t", $ctg, $pos, $alt_dp, $alt_frac, $map_qual) . "\n";
@@ -166,7 +189,7 @@ sub vcf_to_snps {
                       $type, $nt1, $nt2, $ref_nt_change, $ref_aa_change, $frameshift,
                       $gene->[0], $locus, $gene_name, [ $gene->[0], $func ],
                       [ @{$hash->{left}}[0, 8] ],
-                      [ @{$hash->{right}}[0, 8] ]
+                      [ @{$hash->{right}}[0, 8] ], $snpEff_type, $snpEff_impact
                     ];
 
     }

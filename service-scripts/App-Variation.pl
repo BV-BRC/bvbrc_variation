@@ -240,7 +240,7 @@ sub process_variation_data {
         # system("ln -s $tmpdir/$_/aln.bam $tmpdir/$_.aln.bam") if -s "$tmpdir/$_/aln.bam";
         # system("ln -s $tmpdir/$_/aln.bam.bai $tmpdir/$_.aln.bam.bai") if -s "$tmpdir/$_/aln.bam.bai";
 
-	link_if_present("$tmpdir/$_/aln.bam", "$tmpdir/$_.aln.bam");
+	    link_if_present("$tmpdir/$_/aln.bam", "$tmpdir/$_.aln.bam");
         link_if_present("$tmpdir/$_/aln.bam.bai", "$tmpdir/$_.aln.bam.bai");
 
         # system("cp $tmpdir/$_/var.vcf $tmpdir/$_.var.vcf") if -s "$tmpdir/$_/var.vcf";
@@ -344,7 +344,6 @@ sub link_snpeff_annotate {
     my $eff_raw = "$dir/var.snpEff.raw.vcf";
     my $ann_raw = "$dir/var.annotated.raw.tsv";
     return unless -s $eff_raw && -s $ann_raw;
-
     my %var2eff;
     my $eff = "$dir/var.snpEff.vcf";
     my $ann = "$dir/var.annotated.tsv";
@@ -364,22 +363,7 @@ sub link_snpeff_annotate {
     }
     close(EFF);
 
-    @lines = `cat $ann_raw`;
-    open(ANN, ">$ann") or die "Could not open $ann";
-    for (@lines) {
-        chomp;
-        print ANN $_;
-        if (/^Sample/) {
-            print ANN "\t".join("\t", 'snpEff_type', 'snpEff_impact');
-        } elsif (! /^#/) {
-            my ($lib, $ctg, $pos) = split(/\t/);
-            my $snpeff = $var2eff{"$ctg,$pos"};
-            print ANN "\t".join("\t", @$snpeff) if $snpeff;
-        }
-        print ANN "\n";
-    }
-    close(ANN);
-
+    cp_if_present($ann_raw, $ann);
 }
 
 sub run_var_combine {
