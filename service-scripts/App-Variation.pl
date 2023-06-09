@@ -13,6 +13,7 @@ use File::Slurp;
 use JSON;
 use P3DataAPI;
 use IPC::Run 'run';
+use List::Util qw(min max);
 
 #
 # Arrange for the proper samtools/bcftools.
@@ -256,10 +257,17 @@ sub process_variation_data {
         cp_if_present("$tmpdir/$_/var.annotated.tsv", "$tmpdir/$_.var.annotated.tsv");
         cp_if_present("$tmpdir/$_/var.annotated.raw.tsv", "$tmpdir/$_.var.annotated.tsv");
         cp_if_present("$tmpdir/$_/var.snpEff.vcf", "$tmpdir/$_.var.snpEff.vcf");
+        cp_if_present("$tmpdir/$_/Nonsyn_var_circular_view_input.txt", "$tmpdir/$_.Nonsyn_var_circular_view_input.txt");
+        cp_if_present("$tmpdir/$_/Deletion_var_circular_view_input.txt", "$tmpdir/$_.Deletion_var_circular_view_input.txt");
+        cp_if_present("$tmpdir/$_/Insertion_var_circular_view_input.txt", "$tmpdir/$_.Insertion_var_circular_view_input.txt");
+        cp_if_present("$tmpdir/$_/High_var_circular_view_input.txt", "$tmpdir/$_.High_var_circular_view_input.txt");
+        cp_if_present("$tmpdir/$_/Moderate_var_circular_view_input.txt", "$tmpdir/$_.Moderate_var_circular_view_input.txt");
+        cp_if_present("$tmpdir/$_/Low_var_circular_view_input.txt", "$tmpdir/$_.Low_var_circular_view_input.txt");
+        cp_if_present("$tmpdir/$_/Modifier_var_circular_view_input.txt", "$tmpdir/$_.Modifier_var_circular_view_input.txt");
 
-	run(["sed", "s/^>/>$_./g"],
-	    "<", "$tmpdir/$_/consensus",
-	    ">", "$tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
+        run(["sed", "s/^>/>$_./g"],
+          "<", "$tmpdir/$_/consensus",
+          ">", "$tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
 
         # system("cat $tmpdir/$_/consensus | sed 's/^>/>$_./g' > $tmpdir/$_.consensus.fa") if -s "$tmpdir/$_/consensus";
     }
@@ -267,6 +275,71 @@ sub process_variation_data {
     run_var_combine($tmpdir, \@libs);
     summarize($tmpdir, \@libs, $mapper, $caller);
 
+    # create a combined var txt file that can be used as an input for the circular viewer
+    my $sequences = parse_fasta("$tmpdir/$ref_id/$ref_id.fna");
+    my %seq_length;
+    for my $name (keys %$sequences) {
+        $seq_length{$name} = $sequences->{$name};
+        print STDERR "contig " . $name . " " . $seq_length{$name} . "\n";	    
+    } 
+
+    my $all_var = "$tmpdir/all.var.tsv";
+    my $all_var_table = `cat $all_var`;
+    
+    print STDERR 'all_var_table = $all_var_table';  
+
+    my $circular_file_Nonsyn = "$tmpdir/all.Nonsyn_var_circular_view_input.txt";
+    my $circular_file_Deletion = "$tmpdir/all.Deletion_var_circular_view_input.txt";
+    my $circular_file_Insertion = "$tmpdir/all.Insertion_var_circular_view_input.txt";
+    my $circular_file_High = "$tmpdir/all.High_var_circular_view_input.txt";
+    my $circular_file_Moderate = "$tmpdir/all.Moderate_var_circular_view_input.txt";
+    my $circular_file_Low = "$tmpdir/all.Low_var_circular_view_input.txt";
+    my $circular_file_Modifier = "$tmpdir/all.Modifier_var_circular_view_input.txt";
+    open(CIR1, ">$circular_file_Nonsyn") or die "Could not open $circular_file_Nonsyn";
+    open(CIR2, ">$circular_file_Deletion") or die "Could not open $circular_file_Deletion";
+    open(CIR3, ">$circular_file_Insertion") or die "Could not open $circular_file_Insertion";
+    open(CIR4, ">$circular_file_High") or die "Could not open $circular_file_High";
+    open(CIR5, ">$circular_file_Moderate") or die "Could not open $circular_file_Moderate";
+    open(CIR6, ">$circular_file_Low") or die "Could not open $circular_file_Low";
+    open(CIR7, ">$circular_file_Modifier") or die "Could not open $circular_file_Modifier";
+    my $len = 2000;
+    my @lines = split /\n/, $all_var_table;
+    for my $i (0..$#lines) {
+        next if $i == 0;
+        my $line = $lines[$i];
+        # print STDERR "$line\n" ;
+        my @col = split(/\t/, $line);
+        my ($contig, $pos, $end) = ($col[1], $col[2], $col[2]+$len);
+        # print STDERR "tsv file  " . $contig . " " . $pos . "\n";
+        my $max_end = $seq_length{$contig};
+        # print STDERR "max_end  " . $max_end . "\n";
+        $end = min($end, $max_end);
+        $pos = max($end - $len, 1);
+        if ($col[8] =~ /Nonsyn/) {
+            print CIR1 "$contig\t$pos\t$end\n";
+        } elsif ($col[8] =~ /Deletion/) {
+            print CIR2 "$contig\t$pos\t$end\n";
+        } elsif ($col[8] =~ /Insertion/) {
+            print CIR3 "$contig\t$pos\t$end\n";
+        }
+        if ($col[21] =~ /HIGH/) {
+            print CIR4 "$contig\t$pos\t$end\n";
+        } elsif ($col[21] =~ /MODERATE/) {
+            print CIR5 "$contig\t$pos\t$end\n";
+        } elsif ($col[21] =~ /LOW/) {
+            print CIR6 "$contig\t$pos\t$end\n";
+        } elsif ($col[21] =~ /MODIFIER/) {
+            print CIR7 "$contig\t$pos\t$end\n";
+        }
+    }
+    close(CIR1);    
+    close(CIR2);    
+    close(CIR3);    
+    close(CIR4);    
+    close(CIR5);    
+    close(CIR6);    
+    close(CIR7);     
+    
     my @outputs;
     push @outputs, map { [ $_, 'txt' ] } glob("$tmpdir/*.txt");
     push @outputs, map { [ $_, 'tsv' ] } glob("$tmpdir/*.tsv");
@@ -280,18 +353,31 @@ sub process_variation_data {
     # return @outputs;
 
     for (@outputs) {
-	my ($ofile, $type) = @$_;
-	if (-f "$ofile") {
+        my ($ofile, $type) = @$_;
+        if (-f "$ofile") {
             my $filename = basename($ofile);
             print STDERR "Output folder = $output_folder\n";
             print STDERR "Saving $ofile => $output_folder/$filename ...\n";
-	    $app->workspace->save_file_to_file("$ofile", {}, "$output_folder/$filename", $type, 1,
-					       (-s "$ofile" > 10_000 ? 1 : 0), # use shock for larger files
-					       # (-s "$ofile" > 20_000_000 ? 1 : 0), # use shock for larger files
-					       $global_token);
-	} else {
-	    warn "Missing desired output file $ofile\n";
-	}
+            if ($filename =~ /circular_view_input.txt/) {
+                my $ws_path = "$output_folder/Text_Files_Circular_Viewer";
+                if (!$app->workspace->exists($ws_path)) {
+                    print "Create folder $ws_path\n";
+                    $app->workspace->create({objects => [[$ws_path, 'folder']]});
+                }
+        
+                $app->workspace->save_file_to_file("$ofile", {}, "$ws_path/$filename", $type, 1,
+                       (-s "$ofile" > 10_000 ? 1 : 0), # use shock for larger files
+                       # (-s "$ofile" > 20_000_000 ? 1 : 0), # use shock for larger files
+                       $global_token);            
+            } else {
+                $app->workspace->save_file_to_file("$ofile", {}, "$output_folder/$filename", $type, 1,
+                       (-s "$ofile" > 10_000 ? 1 : 0), # use shock for larger files
+                       # (-s "$ofile" > 20_000_000 ? 1 : 0), # use shock for larger files
+                       $global_token);            
+            }
+        } else {
+            warn "Missing desired output file $ofile\n";
+        }
     }
 
     my $time2 = `date`;
@@ -310,6 +396,66 @@ sub run_var_annotate {
     my @cmd = split(' ', "$annotate --header $fna $gff $dir/var.snpEff.raw.vcf");
     my ($out) = run_cmd(\@cmd, 0);
     write_output($out, "$dir/var.annotated.raw.tsv");
+
+    # create a txt file that can be used as an input for the circular viewer
+    my $sequences = parse_fasta($fna);
+    my %seq_length;
+    for my $name (keys %$sequences) {
+        $seq_length{$name} = $sequences->{$name};
+        print STDERR "contig " . $name . " " . $seq_length{$name} . "\n";
+    } 
+
+    my $circular_file_Nonsyn = "$dir/Nonsyn_var_circular_view_input.txt";
+    my $circular_file_Deletion = "$dir/Deletion_var_circular_view_input.txt";
+    my $circular_file_Insertion = "$dir/Insertion_var_circular_view_input.txt";
+    my $circular_file_High = "$dir/High_var_circular_view_input.txt";
+    my $circular_file_Moderate = "$dir/Moderate_var_circular_view_input.txt";
+    my $circular_file_Low = "$dir/Low_var_circular_view_input.txt";
+    my $circular_file_Modifier = "$dir/Modifier_var_circular_view_input.txt";
+    open(CIR1, ">$circular_file_Nonsyn") or die "Could not open $circular_file_Nonsyn";
+    open(CIR2, ">$circular_file_Deletion") or die "Could not open $circular_file_Deletion";
+    open(CIR3, ">$circular_file_Insertion") or die "Could not open $circular_file_Insertion";
+    open(CIR4, ">$circular_file_High") or die "Could not open $circular_file_High";
+    open(CIR5, ">$circular_file_Moderate") or die "Could not open $circular_file_Moderate";
+    open(CIR6, ">$circular_file_Low") or die "Could not open $circular_file_Low";
+    open(CIR7, ">$circular_file_Modifier") or die "Could not open $circular_file_Modifier";
+    my $len = 2000;
+    my @lines = split /\n/, $out;
+    for my $i (0..$#lines) {
+        next if $i == 0;
+        my $line = $lines[$i];
+        # print STDERR "$line\n" ;
+        my @col = split(/\t/, $line);
+        my ($contig, $pos, $end) = ($col[1], $col[2], $col[2]+$len);
+        # print STDERR "tsv file  " . $contig . " " . $pos . "\n";
+        my $max_end = $seq_length{$contig};
+        # print STDERR "max_end  " . $max_end . "\n";
+        $end = min($end, $max_end);
+        $pos = max($end - $len, 1);
+        if ($col[8] =~ /Nonsyn/) {
+            print CIR1 "$contig\t$pos\t$end\n";
+        } elsif ($col[8] =~ /Deletion/) {
+            print CIR2 "$contig\t$pos\t$end\n";
+        } elsif ($col[8] =~ /Insertion/) {
+            print CIR3 "$contig\t$pos\t$end\n";
+        }
+        if ($col[21] =~ /HIGH/) {
+            print CIR4 "$contig\t$pos\t$end\n";
+        } elsif ($col[21] =~ /MODERATE/) {
+            print CIR5 "$contig\t$pos\t$end\n";
+        } elsif ($col[21] =~ /LOW/) {
+            print CIR6 "$contig\t$pos\t$end\n";
+        } elsif ($col[21] =~ /MODIFIER/) {
+            print CIR7 "$contig\t$pos\t$end\n";
+        }
+    }
+    close(CIR1);    
+    close(CIR2);    
+    close(CIR3);    
+    close(CIR4);    
+    close(CIR5);    
+    close(CIR6);    
+    close(CIR7);      
 }
 
 sub run_snpeff {
@@ -677,4 +823,28 @@ sub cp_if_present
     {
 	copy($from, $to);
     }
+}
+
+
+sub parse_fasta {
+    my ($file) = @_;
+    my %sequences;
+    my $current_header;
+
+    open my $fh, '<', $file or die "Could not open $file: $!";
+
+    while (my $line = <$fh>) {
+        chomp $line;
+        $line =~ s/\r//g;
+        $line =~ s/\t//g;
+        if ($line =~ /^>(\S+)/) {
+            $current_header = $1;
+            $sequences{$current_header} = 0;
+        }
+        elsif ($current_header) {
+            $sequences{$current_header} += length $line;
+        }
+    }
+    close $fh;
+    return \%sequences;
 }
