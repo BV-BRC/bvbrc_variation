@@ -22,8 +22,8 @@ The code in this module provides the BV-BRC application service wrapper scripts 
 
 ## See also
 
-* [Variation Analysis Service] (https://bv-brc.org/app/Variation)
-* [Variation Analysis Service Tutorial] (https://www.bv-brc.org/docs/tutorial/variation_analysis/variation_analysis.html)
+* [Variation Analysis Service](https://bv-brc.org/app/Variation)
+* [Variation Analysis Service Tutorial](https://www.bv-brc.org/docs/tutorial/variation_analysis/variation_analysis.html)
 
 ## References
 
