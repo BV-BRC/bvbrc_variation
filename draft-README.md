@@ -18,6 +18,7 @@ This module provides the following application specfication(s):
 
 ## See also
 
+* [Variation Analysis Service Quick Reference](https://www.bv-brc.org/docs/quick_references/services/variation_analysis_service.html)
 * [Variation Analysis Service](https://www.bv-brc.org/docs/https://bv-brc.org/app/Variation.html)
 * [Variation Analysis Service Tutorial](https://www.bv-brc.org/docs//tutorial/variation_analysis/variation_analysis.html)
 
