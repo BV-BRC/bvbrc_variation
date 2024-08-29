@@ -12,6 +12,7 @@ use File::Basename;
 use File::Slurp;
 use JSON;
 use P3DataAPI;
+use File::Which;
 use IPC::Run 'run';
 use List::Util qw(min max);
 
@@ -27,6 +28,26 @@ BEGIN {
     $path_prefix = "$rt/samtools-1.17/bin:$rt/bcftools-1.17/bin";
     $ENV{PATH} = "$path_prefix:$ENV{PATH}";
 }
+
+#
+# Find right snpeff name to use
+#
+my @snpEffOptions = qw(snpEff.sh snpEff);
+my $snpEffPath;
+for my $snpEffTest (@snpEffOptions)
+{
+    my $vers;
+    print "Try '$snpEffTest'\n";
+    my $ok = eval { run([$snpEffTest, "-version"], ">", \$vers); };
+    if ($ok)
+    {
+	my($path) = File::Which::which($snpEffTest);
+	warn "Using $path version $vers\n";
+	$snpEffPath = $path;;
+	last;
+    }
+}
+$snpEffPath or die "Cannot find snpEff in $ENV{PATH}; options are @snpEffOptions\n";
 
 use Bio::KBase::AppService::AppConfig;
 use Bio::KBase::AppService::AppScript;
@@ -471,9 +492,9 @@ sub run_snpeff {
     close(F);
     my $here = getcwd();
     chdir($dir);
-    my @cmd = ("snpEff.sh", "build", "-c", $config, "-genbank", "-v", $ref_id);
+    my @cmd = ($snpEffPath, "build", "-c", $config, "-genbank", "-v", $ref_id);
     run_cmd(\@cmd, 1);
-    @cmd = ("snpEff.sh", "eff", "-no-downstream", "-no-upstream", "-no-utr", "-o", "vcf", "-c", $config,  $ref_id, "var.vcf");
+    @cmd = ($snpEffPath, "eff", "-no-downstream", "-no-upstream", "-no-utr", "-o", "vcf", "-c", $config,  $ref_id, "var.vcf");
     my ($out) = run_cmd(\@cmd, 0);
     write_output($out, "var.snpEff.raw.vcf");
     chdir($here);
