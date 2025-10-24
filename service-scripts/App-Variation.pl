@@ -619,13 +619,13 @@ sub prepare_ref_data {
     $gid or die "Missing reference genome id\n";
 
     my $api = P3DataAPI->new();
-    my @res = $api->query("genome", ["eq", "genome_id",$gid], ["select", "patric_cds"]);
+    my @res = $api->query("genome", ["eq", "genome_id",$gid], ["select", "cds"]);
 
     if (!@res)
     {
 	die "Could not query data api for genome $gid\n";
     }
-    my $cds_count = $res[0]->{patric_cds};
+    my $cds_count = $res[0]->{cds};
     if ($cds_count > 0)
     {
 	print STDERR "Genome $gid has $cds_count patric CDSs\n";
